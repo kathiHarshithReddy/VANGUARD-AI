@@ -1,0 +1,74 @@
+# Project VANGUARD — GCP Load Balancer Backend Service
+#
+# Deploys VANGUARD as a backend service on GCP using Cloud Run + Load Balancer.
+# VANGUARD runs as a Cloud Run service fronting your origin backend.
+#
+# Prerequisites:
+#   gcloud auth login
+#   gcloud config set project <PROJECT_ID>
+#   gcloud services enable run.googleapis.com compute.googleapis.com
+#
+# Deploy:
+#   gcloud run deploy vanguard \
+#     --image gcr.io/<PROJECT_ID>/vanguard:latest \
+#     --platform managed \
+#     --region us-central1 \
+#     --allow-unauthenticated \
+#     --set-env-vars "ORIGIN_URL=<YOUR_ORIGIN_URL>" \
+#     --port 8080 \
+#     --min-instances 1 \
+#     --max-instances 100 \
+#     --concurrency 500 \
+#     --cpu 2 \
+#     --memory 1Gi
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: vanguard
+  annotations:
+    run.googleapis.com/launch-stage: GA
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # Allow bursting to handle DDoS traffic spikes
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "100"
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      containerConcurrency: 500
+      timeoutSeconds: 30
+      serviceAccountName: vanguard-sa@<PROJECT_ID>.iam.gserviceaccount.com
+      containers:
+        - image: gcr.io/<PROJECT_ID>/vanguard:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          env:
+            - name: ORIGIN_URL
+              value: "<YOUR_ORIGIN_URL>"
+            - name: PROXY_PORT
+              value: "8080"
+            - name: ENTROPY_BENIGN_THRESHOLD
+              value: "0.45"
+            - name: ENTROPY_BLOCK_CONFIDENCE
+              value: "0.85"
+            - name: DOJO_PAYLOADS_PER_MINUTE
+              value: "1000"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
