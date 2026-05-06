@@ -1,0 +1,95 @@
+# ─── Deploy to Kubernetes ────────────────────────────────────────────────────
+#
+# Triggered on push to main after CI passes.
+#
+# What it does:
+#   1. Writes a kubeconfig from the secret
+#   2. Updates the image tag in the Deployment manifest
+#   3. Applies all Kubernetes manifests (Deployment, HPA, Service)
+#   4. Waits for the rollout to complete
+#
+# Required secrets (Settings → Secrets → Actions):
+#   KUBECONFIG_BASE64   Base64-encoded kubeconfig for your cluster
+#       Generate: cat ~/.kube/config | base64 -w 0
+#   K8S_NAMESPACE       Kubernetes namespace (default: "default")
+#   REGISTRY            Image registry + repo, e.g. ghcr.io/your-org/vanguard
+#                       or 123456789.dkr.ecr.us-east-1.amazonaws.com/vanguard
+#   ORIGIN_URL          The origin URL to inject into the ConfigMap
+
+name: Deploy → Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+jobs:
+  deploy-k8s:
+    name: Rolling Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: k8s-production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Configure kubectl ─────────────────────────────────────────────────
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Write kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      # ── Patch image tag in deployment manifest ────────────────────────────
+      - name: Substitute image tag
+        run: |
+          REGISTRY="${{ secrets.REGISTRY }}"
+          SHA="${{ github.sha }}"
+          NAMESPACE="${{ secrets.K8S_NAMESPACE || 'default' }}"
+
+          # Replace the generic image reference with the real registry + sha
+          sed -i "s|image: vanguard:latest|image: ${REGISTRY}:${SHA}|g" \
+            deploy/kubernetes/deployment.yml
+
+          # Patch the ConfigMap ORIGIN_URL
+          ORIGIN="${{ secrets.ORIGIN_URL }}"
+          if [ -n "$ORIGIN" ]; then
+            sed -i "s|ORIGIN_URL: \"http://origin-service:8000\"|ORIGIN_URL: \"${ORIGIN}\"|g" \
+              deploy/kubernetes/deployment.yml
+          fi
+
+          echo "--- Final deployment.yml image line ---"
+          grep "image:" deploy/kubernetes/deployment.yml
+
+      # ── Apply manifests ───────────────────────────────────────────────────
+      - name: Apply Kubernetes manifests
+        run: |
+          NAMESPACE="${{ secrets.K8S_NAMESPACE || 'default' }}"
+
+          kubectl apply -n "${NAMESPACE}" -f deploy/kubernetes/deployment.yml
+          kubectl apply -n "${NAMESPACE}" -f deploy/kubernetes/service.yml
+
+      # ── Wait for rollout ──────────────────────────────────────────────────
+      - name: Wait for rollout to complete
+        run: |
+          NAMESPACE="${{ secrets.K8S_NAMESPACE || 'default' }}"
+          kubectl rollout status deployment/vanguard \
+            -n "${NAMESPACE}" \
+            --timeout=300s
+
+      # ── Verify pods are running ───────────────────────────────────────────
+      - name: Verify pod health
+        run: |
+          NAMESPACE="${{ secrets.K8S_NAMESPACE || 'default' }}"
+          kubectl get pods -n "${NAMESPACE}" -l app=vanguard -o wide
+          kubectl get svc  -n "${NAMESPACE}" vanguard
+
+      - name: Deployment summary
+        run: |
+          echo "✅ VANGUARD deployed to Kubernetes"
+          echo "   Namespace  : ${{ secrets.K8S_NAMESPACE || 'default' }}"
+          echo "   Image SHA  : ${{ github.sha }}"

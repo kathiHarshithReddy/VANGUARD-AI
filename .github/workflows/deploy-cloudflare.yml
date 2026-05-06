@@ -1,0 +1,77 @@
+# ─── Deploy Cloudflare Worker ─────────────────────────────────────────────────
+#
+# Triggered on push to main after CI passes.
+#
+# What it does:
+#   1. Installs wrangler (Cloudflare's CLI)
+#   2. Substitutes ORIGIN placeholder in the worker script with the real origin URL
+#   3. Deploys the worker to Cloudflare
+#
+# Required secrets (Settings → Secrets → Actions):
+#   CF_API_TOKEN     Cloudflare API token with Workers:Edit permission
+#   CF_ACCOUNT_ID    Your Cloudflare account ID
+#   ORIGIN_URL       The full URL of your VANGUARD proxy or origin
+#                    e.g. https://vanguard.your-domain.com
+#
+# Optional variables:
+#   CF_WORKER_NAME   Override the worker name (default: vanguard-edge)
+
+name: Deploy → Cloudflare
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+jobs:
+  deploy-cloudflare:
+    name: Deploy Cloudflare Edge Worker
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: cloudflare-production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Substitute origin URL in worker config ────────────────────────────
+      - name: Inject ORIGIN_URL into worker
+        run: |
+          ORIGIN="${{ secrets.ORIGIN_URL }}"
+          if [ -z "$ORIGIN" ]; then
+            echo "❌ ORIGIN_URL secret is not set — skipping deploy"
+            exit 1
+          fi
+          # Replace the placeholder string in the worker source
+          sed -i "s|https://your-origin.example.com|${ORIGIN}|g" \
+            deploy/cloudflare/worker.js
+          echo "✅ ORIGIN set to: ${ORIGIN}"
+
+      # ── Create wrangler config ────────────────────────────────────────────
+      - name: Write wrangler.toml
+        run: |
+          WORKER_NAME="${{ vars.CF_WORKER_NAME || 'vanguard-edge' }}"
+          cat > deploy/cloudflare/wrangler.toml << EOF
+          name = "${WORKER_NAME}"
+          main = "worker.js"
+          compatibility_date = "2024-01-01"
+          compatibility_flags = ["nodejs_compat"]
+
+          [vars]
+          RATE_LIMIT_RPM = "500"
+          EOF
+
+      # ── Deploy via wrangler ───────────────────────────────────────────────
+      - name: Deploy Cloudflare Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          workingDirectory: deploy/cloudflare
+          command: deploy
+
+      - name: Deployment summary
+        run: |
+          echo "✅ VANGUARD Cloudflare Worker deployed"
+          echo "   Worker: ${{ vars.CF_WORKER_NAME || 'vanguard-edge' }}"
+          echo "   Origin: ${{ secrets.ORIGIN_URL }}"

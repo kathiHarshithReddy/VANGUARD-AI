@@ -1,0 +1,100 @@
+# ─── Deploy to AWS (ECS via ECR + CloudFormation) ────────────────────────────
+#
+# Triggered on push to main after CI passes.
+#
+# What it does:
+#   1. Build & push Docker image to Amazon ECR
+#   2. Update the ECS service to use the new image
+#      (uses the task-definition pattern — no CloudFormation re-deploy needed
+#       for routine image updates; CloudFormation is used for infra changes only)
+#
+# Required secrets (Settings → Secrets → Actions):
+#   AWS_ACCESS_KEY_ID         IAM access key
+#   AWS_SECRET_ACCESS_KEY     IAM secret key
+#   AWS_REGION                e.g. us-east-1
+#   AWS_ECR_REGISTRY          e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com
+#   AWS_ECR_REPOSITORY        e.g. vanguard
+#   AWS_ECS_CLUSTER           ECS cluster name  (e.g. vanguard-cluster)
+#   AWS_ECS_SERVICE           ECS service name  (e.g. vanguard-service)
+#   AWS_ECS_TASK_FAMILY       ECS task family   (e.g. vanguard-sidecar)
+#   AWS_ECS_CONTAINER_NAME    Container name in task def (e.g. vanguard)
+
+name: Deploy → AWS
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types: [completed]
+
+jobs:
+  deploy-aws:
+    name: Deploy to Amazon ECS
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    environment: aws-production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Configure AWS credentials ─────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # ── Log in to Amazon ECR ──────────────────────────────────────────────
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── Build & push image ────────────────────────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image to ECR
+        id: build-image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.AWS_ECR_REGISTRY }}/${{ secrets.AWS_ECR_REPOSITORY }}:latest
+            ${{ secrets.AWS_ECR_REGISTRY }}/${{ secrets.AWS_ECR_REPOSITORY }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Update ECS task definition ────────────────────────────────────────
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ secrets.AWS_ECS_TASK_FAMILY }} \
+            --query taskDefinition \
+            > /tmp/task-def.json
+
+      - name: Render new task definition with updated image
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: /tmp/task-def.json
+          container-name: ${{ secrets.AWS_ECS_CONTAINER_NAME }}
+          image: ${{ secrets.AWS_ECR_REGISTRY }}/${{ secrets.AWS_ECR_REPOSITORY }}:${{ github.sha }}
+
+      # ── Deploy to ECS ─────────────────────────────────────────────────────
+      - name: Deploy ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ secrets.AWS_ECS_SERVICE }}
+          cluster: ${{ secrets.AWS_ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Deployment summary
+        run: |
+          echo "✅ VANGUARD deployed to AWS ECS"
+          echo "   Image : ${{ secrets.AWS_ECR_REGISTRY }}/${{ secrets.AWS_ECR_REPOSITORY }}:${{ github.sha }}"
+          echo "   Cluster: ${{ secrets.AWS_ECS_CLUSTER }}"
+          echo "   Service: ${{ secrets.AWS_ECS_SERVICE }}"
