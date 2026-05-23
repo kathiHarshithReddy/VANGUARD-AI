@@ -1,0 +1,356 @@
+# Instincts generated from https://github.com/kathiHarshithReddy/VANGUARD-AI
+# Generated: 2026-05-06T13:42:48.637Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: VANGUARD-AI-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/kathiHarshithReddy/VANGUARD-AI
+---
+
+# VANGUARD AI Commit Length
+
+## Action
+
+Keep commit messages concise (~41 characters)
+
+## Evidence
+
+- Average commit message length: 41 chars
+- Based on 2 commits
+
+---
+id: VANGUARD-AI-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/kathiHarshithReddy/VANGUARD-AI
+---
+
+# VANGUARD AI Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: VANGUARD-AI-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/kathiHarshithReddy/VANGUARD-AI
+---
+
+# VANGUARD AI Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: VANGUARD-AI-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/kathiHarshithReddy/VANGUARD-AI
+---
+
+# VANGUARD AI Export Style
+
+## Action
+
+Prefer default exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: default
+
+---
+id: VANGUARD-AI-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/kathiHarshithReddy/VANGUARD-AI
+---
+
+# VANGUARD AI Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: VANGUARD-AI-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/kathiHarshithReddy/VANGUARD-AI
+---
+
+# VANGUARD AI Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.ts
+
+## Evidence
+
+- File pattern: *.test.ts
+- Consistent across test files
+
+---
+id: vanguard-ai-instinct-naming-files
+trigger: "When creating a new Python file"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Naming Files
+
+## Action
+
+Name the file using snake_case
+
+## Evidence
+
+- Pattern: namingConventions.files = snake_case
+
+---
+id: vanguard-ai-instinct-naming-functions
+trigger: "When defining a new function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Naming Functions
+
+## Action
+
+Name the function using camelCase
+
+## Evidence
+
+- Pattern: namingConventions.functions = camelCase
+
+---
+id: vanguard-ai-instinct-naming-classes
+trigger: "When defining a new class"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Naming Classes
+
+## Action
+
+Name the class using PascalCase
+
+## Evidence
+
+- Pattern: namingConventions.classes = PascalCase
+
+---
+id: vanguard-ai-instinct-naming-constants
+trigger: "When defining a constant"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Naming Constants
+
+## Action
+
+Name the constant using SCREAMING_SNAKE_CASE
+
+## Evidence
+
+- Pattern: namingConventions.constants = SCREAMING_SNAKE_CASE
+
+---
+id: vanguard-ai-instinct-import-style
+trigger: "When importing modules within the package"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Import Style
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- Pattern: importStyle = relative
+
+---
+id: vanguard-ai-instinct-export-style
+trigger: "When exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Export Style
+
+## Action
+
+Use default export style
+
+## Evidence
+
+- Pattern: exportStyle = default
+
+---
+id: vanguard-ai-instinct-test-location
+trigger: "When adding new tests"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Test Location
+
+## Action
+
+Place test files in the separate 'tests' folder
+
+## Evidence
+
+- Pattern: folderStructure.testLocation = separate
+- Common folder: tests
+
+---
+id: vanguard-ai-instinct-test-pattern
+trigger: "When naming a test file"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Test Pattern
+
+## Action
+
+Use the '*.test.ts' file pattern
+
+## Evidence
+
+- Pattern: filePattern = *.test.ts
+
+---
+id: vanguard-ai-instinct-test-type
+trigger: "When writing tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Test Type
+
+## Action
+
+Write unit tests
+
+## Evidence
+
+- Pattern: testTypes = unit
+
+---
+id: vanguard-ai-instinct-commit-format
+trigger: "When making a commit"
+confidence: 0.8
+domain: git
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Commit Format
+
+## Action
+
+Use a short, freeform commit message without a required prefix
+
+## Evidence
+
+- Pattern: commits.type = freeform
+- Examples: 'Initial plan', 'Scaffold Project VANGUARD — full AI web security shield implementation'
+
+---
+id: vanguard-ai-instinct-commit-length
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Commit Length
+
+## Action
+
+Keep the commit message concise (around 40 characters on average)
+
+## Evidence
+
+- Pattern: commits.averageLength = 41
+
+---
+id: vanguard-ai-instinct-error-handling
+trigger: "When handling errors in code"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: kathiHarshithReddy/VANGUARD-AI
+---
+
+# Vanguard Ai Instinct Error Handling
+
+## Action
+
+Use try-catch blocks for error handling
+
+## Evidence
+
+- Pattern: errorHandling.style = try-catch
+
